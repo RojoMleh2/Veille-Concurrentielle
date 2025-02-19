@@ -17,8 +17,7 @@ def load_data():
     return df
 
 df = load_data()
-# DEBUG : Afficher les colonnes pour voir si le nom est correct
-st.write("Colonnes détectées :", df.columns.tolist())
+
 
 # Vérifier si "Nom de la Solution" existe vraiment
 if "Nom de la Solution" not in df.columns:
