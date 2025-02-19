@@ -10,12 +10,20 @@ st.set_page_config(page_title="Dashboard Veille Concurrentielle", page_icon="�
 @st.cache_data
 def load_data():
     file_path = "veille.csv"  # Remplace avec ton chemin de fichier
-    df = pd.read_csv(file_path, delimiter=";")
+    df = pd.read_csv(file_path, delimiter=";", encoding="utf-8")  # Encodage sécurisé
+    df.columns = df.columns.str.strip()  # Supprime les espaces autour des noms de colonnes
     df = df.dropna(axis=1, how='all')  # Suppression colonnes vides
     df = df.fillna("NC")  # Remplacement des valeurs manquantes
     return df
 
 df = load_data()
+# DEBUG : Afficher les colonnes pour voir si le nom est correct
+st.write("Colonnes détectées :", df.columns.tolist())
+
+# Vérifier si "Nom de la Solution" existe vraiment
+if "Nom de la Solution" not in df.columns:
+    st.error("Erreur : La colonne 'Nom de la Solution' n'existe pas. Vérifiez le fichier CSV.")
+
 
 # ------ STYLISATION ------
 primary_color = "#FF6600"  # Orange vif
