@@ -157,4 +157,151 @@ with tab4:
     )
     st.plotly_chart(fig_energy, use_container_width=True)
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+
+# ------ CONFIGURATION DE LA PAGE ------
+st.set_page_config(page_title="Dashboard Veille Concurrentielle", page_icon="📊", layout="wide")
+
+# ------ CHARGEMENT DES DONNÉES ------
+@st.cache_data
+def load_data():
+    file_path = "veille.csv"  # Remplace avec ton chemin
+    df = pd.read_csv(file_path, delimiter=";", encoding="utf-8")  # Encodage sécurisé
+    df.columns = df.columns.str.strip()  # Supprime les espaces autour des noms de colonnes
+    return df
+
+df = load_data()
+
+# ------ DEBUG : Vérifier les colonnes ------
+st.sidebar.write("Colonnes détectées :", df.columns.tolist())
+
+if "Nom de la Solution" not in df.columns:
+    st.error("Erreur : La colonne 'Nom de la Solution' n'existe pas. Vérifiez le fichier CSV.")
+    st.stop()
+
+# ------ STYLISATION ------
+primary_color = "#FF6600"  # Orange vif
+secondary_color = "#333333"  # Gris foncé
+background_color = "#FFFFFF"  # Blanc
+
+st.markdown(
+    f"""
+    <style>
+        .main {{ background-color: {background_color}; }}
+        h1, h2, h3, h4, h5, h6 {{ color: {secondary_color}; }}
+        .stButton>button {{ background-color: {primary_color}; color: white; }}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# ------ FILTRES ------
+st.sidebar.header("🔎 Filtres")
+selected_competitors = st.sidebar.multiselect(
+    "Sélectionner les solutions concurrentes",
+    options=df["Nom de la Solution"].unique(),
+    default=df["Nom de la Solution"].unique()[:3]
+)
+
+selected_kpi = st.sidebar.selectbox(
+    "Choisir un KPI à analyser",
+    [
+        "Score d’innovation & adoption technologique",
+        "Indice d’Interopérabilité",
+        "Niveau de digitalisation",
+        "Indice de conformité réglementaire",
+        "Score de couverture fonctionnelle",
+        "Performance énergétique & suivi",
+        "Évolutivité & mises à jour"
+    ]
+)
+
+filtered_df = df[df["Nom de la Solution"].isin(selected_competitors + ["SEXTANT"])]
+
+# ------ ORGANISATION DES ONGLETS ------
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "🏠 Accueil", "⚡ Innovation", "🔗 Interopérabilité", "📊 Performance", "🔍 Conformité", "📈 Comparatif"
+])
+
+# ------ PAGE D'ACCUEIL ------
+with tab1:
+    st.title("📊 Dashboard Veille Concurrentielle - Smart Building")
+    st.markdown("**Comparaison de SEXTANT (Nextiim) avec d'autres solutions du marché.**")
+
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("🔹 Solutions Comparées", len(filtered_df))
+    with col2:
+        st.metric("🚀 Score d'Innovation", "⚡ 85%")
+    with col3:
+        st.metric("🔄 Interopérabilité Moyenne", "🔗 78%")
+
+    # Graphique circulaire du niveau de digitalisation
+    digitalisation_counts = filtered_df["App Full Web"].value_counts()
+    fig_digital = px.pie(
+        names=digitalisation_counts.index, 
+        values=digitalisation_counts.values,
+        title="Niveau de Digitalisation (Full Web vs Serveur Client)",
+        color=digitalisation_counts.index,
+        color_discrete_map={"OUI": primary_color, "NON": secondary_color, "NC": "grey"}
+    )
+    st.plotly_chart(fig_digital, use_container_width=True)
+
+# ------ CONFORMITÉ ------
+with tab5:
+    st.header("🔍 Indice de Conformité Réglementaire")
+
+    compliance_features = ["Interface Decret Tertiaire", "Suivi objectifs Decret Tertiaire"]
+    compliance_df = filtered_df[["Nom de la Solution"] + compliance_features].copy()
+
+    for col in compliance_features:
+        compliance_df[col] = compliance_df[col].apply(lambda x: 1 if x == "OUI" else 0)
+
+    compliance_df["Score Conformité"] = compliance_df[compliance_features].sum(axis=1)
+
+    fig_compliance = px.bar(
+        compliance_df, x="Nom de la Solution", y="Score Conformité",
+        title="Comparaison des solutions en termes de conformité",
+        color="Nom de la Solution"
+    )
+    st.plotly_chart(fig_compliance, use_container_width=True)
+
+# ------ COMPARATIF DÉTAILLÉ ------
+with tab6:
+    st.header("📈 Comparatif détaillé des solutions")
+    
+    comparison_features = [
+        "Maquette BIM", "Géoréférencement dans la maquette", "Plans 3D", "Scan photos",
+        "Dataroom", "Interface GTB existante", "Interopérabilités des appli tierces",
+        "Répartition énergétique", "Suivi des factures", "Analyse des données par IA"
+    ]
+
+    comparison_df = filtered_df[["Nom de la Solution"] + comparison_features].copy()
+
+    for col in comparison_features:
+        comparison_df[col] = comparison_df[col].apply(lambda x: 1 if x == "OUI" else 0)
+
+    # Heatmap pour comparer toutes les solutions
+    fig_heatmap = px.imshow(
+        comparison_df.set_index("Nom de la Solution").T,
+        labels=dict(x="Solutions", y="Fonctionnalités", color="Présence"),
+        title="🔍 Présence des fonctionnalités par solution"
+    )
+    st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    # Courbe d’évolution des fonctionnalités
+    st.subheader("📊 Courbe d’évolution des solutions")
+    feature_counts = comparison_df.drop(columns="Nom de la Solution").sum(axis=1)
+    evolution_df = pd.DataFrame({"Nom de la Solution": comparison_df["Nom de la Solution"], "Total Fonctionnalités": feature_counts})
+
+    fig_evolution = px.line(
+        evolution_df, x="Nom de la Solution", y="Total Fonctionnalités",
+        markers=True, title="🔄 Évolution des solutions en termes de fonctionnalités"
+    )
+    st.plotly_chart(fig_evolution, use_container_width=True)
+
 st.success("🚀 Dashboard prêt ! Teste les filtres pour explorer les données.")
